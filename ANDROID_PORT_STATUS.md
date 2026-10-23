@@ -1,20 +1,25 @@
-# Android ARM64 port status
+# Discord Rich Presence — preparación de port Android arm64
 
-## What this package does
+Este árbol parte del repositorio fuente que proporcionó el usuario y añade un workflow de compilación Geode `android64` y detección de plataforma Android en `main.cpp`.
 
-- Keeps DiscordRPC2's Geode hooks and Geometry Dash activity collection code.
-- Removes the unavailable `EclipseMenu/discord-presence` dependency from Android builds, so Android builds no longer fail just trying to fetch that desktop-oriented dependency.
-- Uses a compile-only Android backend. It stores the most recent `RPCOptions` and logs a clear warning; it does **not** publish Rich Presence yet.
-- Leaves the original desktop RPC backend intact for non-Android builds.
+## Estado real
 
-## Why the mobile status is not implemented yet
+**Esto todavía no es un port funcional de Rich Presence para Android.** No se ha podido verificar una compilación en este entorno y la implementación de RPC actual usa `EclipseMenu/discord-presence` (`discord-rpc`), una implementación heredada diseñada alrededor del transporte RPC de cliente de escritorio. Que el mod compile para Android no demuestra que pueda publicar presencia en la app móvil de Discord.
 
-The original `discord-presence` / legacy `discord-rpc` transport targets a local Discord desktop client. It cannot simply connect to the Android Discord app. Discord's current documentation now describes Rich Presence over an unauthenticated RPC transport on Android via Discord Social SDK 1.10+, requiring the SDK, a registered Discord application ID, and a compatible Android integration. This source package does not include that SDK or a verified Geode-to-SDK bridge, so pretending the old IPC client works would be incorrect.
+## Bloqueador de Rich Presence
 
-## Next implementation step
+Para lograr presencia real en Android hay que reemplazar el backend de `RPCManager` por un transporte soportado en Android. La documentación actual de Discord indica que Social SDK 1.10+ admite Rich Presence en Android mediante RPC no autenticado, pero ese SDK es una dependencia nativa separada y debe descargarse desde el Developer Portal, verificarse y enlazarse para `arm64-v8a`. No se incluye aquí ningún binario de Discord ni credencial.
 
-Integrate the official Discord Social SDK Android RPC transport behind a separate Android-only adapter, confirm the SDK's distribution/licensing and ABI requirements, then map `RPCOptions` fields to its `Activity` API. Keep all state collection in `Observer.cpp`; only replace the transport in `RPCManager.cpp`.
+El código de `Observer`/`RPCOptions` conserva la lógica que calcula el estado de Geometry Dash; la capa que publica esos datos en Discord necesita adaptación al modelo `discordpp::Client` / `Activity` del Social SDK. No debe darse por hecho que `discord-rpc` antiguo funcione en Android.
 
-## Build
+## Compilación tentativa
 
-The GitHub Actions workflow builds for Geode `Android64`. The resulting `.geode` is a test package, not a functional mobile Rich Presence release until the SDK adapter is implemented and tested on-device.
+El workflow `.github/workflows/android64.yml` intenta compilar el árbol con `target: android64`. Si la dependencia `discord-presence` no compila para ese target, el workflow fallará hasta que se reemplace o condicione esa dependencia. Si compila, eso solo valida el binario Geode, no la entrega de presencia a Discord Android.
+
+## Referencias
+
+- Geode SDK: https://github.com/geode-sdk
+- Geode docs: https://docs.geode-sdk.org/
+- Discord Social SDK docs: https://discord.com/developers/docs/social-sdk/index.html
+- Discord Social SDK installation: https://discord.com/developers/docs/social-sdk/installation.html
+- Discord Social SDK release notes (Android RPC support in 1.10): https://discord.com/developers/docs/social-sdk/release_notes.html
