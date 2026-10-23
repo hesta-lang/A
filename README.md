@@ -1,4 +1,4 @@
-# TeamSpeakPoorExistence
+# Discord Rich Presence Android 
 This is where she makes a mod.
 
 <img src="logo.png" width="150" alt="the mod's logo" />
@@ -21,3 +21,4 @@ geode build
 * [Geode CLI](https://github.com/geode-sdk/cli)
 * [Bindings](https://github.com/geode-sdk/bindings/)
 * [Dev Tools](https://github.com/geode-sdk/DevTools)
+* ATTENTION: THIS MOD WAS PORTED WITH AI, ALL CREDITS BELONG TO TECHSTUDENT10
