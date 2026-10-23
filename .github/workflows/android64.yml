@@ -1,0 +1,44 @@
+name: Build DiscordRPC2 for Android64
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "CMakeLists.txt"
+      - "mod.json"
+      - ".github/workflows/android64.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-android64:
+    name: Compile Android arm64-v8a
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Geode mod for Android64
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          path: .
+          target: Android64
+          sdk: latest
+          build-config: Release
+          android-min-sdk: 23
+      - name: Find generated package
+        id: artifact
+        shell: bash
+        run: |
+          file="$(find . -type f -name '*.geode' -print -quit)"
+          if [ -z "$file" ]; then echo 'No .geode package generated'; exit 1; fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "Generated: $file"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: discordrpc2-android64-compile-test
+          path: ${{ steps.artifact.outputs.file }}
+          if-no-files-found: error
+          retention-days: 14
