@@ -65,7 +65,9 @@ namespace {
                         result.Error());
                 }
             });
-        discordpp::RunCallbacks();
+        // Do not pump SDK callbacks here. Discord documents RunCallbacks as a
+        // periodic main-loop operation; calling it only immediately after the
+        // request is not a valid substitute for a game-loop integration.
     }
 }
 #endif
@@ -100,8 +102,11 @@ void RPCManager::initRPC() {
 
 void RPCManager::clearRPC() {
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
-    if (s_discordClient) s_discordClient->ClearRichPresence();
-    discordpp::RunCallbacks();
+    if (s_discordClient) {
+        s_discordClient->ClearRichPresence();
+        // Callback pumping must be wired into the game's regular main loop
+        // before this SDK path can safely be enabled.
+    }
 #elif defined(DRPC_ANDROID_NO_PRESENCE)
     currentOptions = RPCOptions{};
 #else
