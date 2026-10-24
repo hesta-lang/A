@@ -20,6 +20,38 @@ using namespace geode::log;
 namespace {
     std::shared_ptr<discordpp::Client> s_discordClient;
 
+    // Pump Discord's native event queue from Geode's game-thread scheduler.
+    // The scheduler retains the node after scheduleUpdate(), so it stays alive
+    // while the mod is loaded.
+    class DiscordCallbackPump final : public cocos2d::CCNode {
+    public:
+        static DiscordCallbackPump* create() {
+            auto* node = new DiscordCallbackPump();
+            if (node && node->init()) {
+                node->autorelease();
+                node->scheduleUpdate();
+                return node;
+            }
+            delete node;
+            return nullptr;
+        }
+
+        void update(float) override {
+            discordpp::RunCallbacks();
+        }
+    };
+
+    DiscordCallbackPump* s_callbackPump = nullptr;
+
+    void startDiscordCallbackPump() {
+        if (!s_callbackPump) {
+            s_callbackPump = DiscordCallbackPump::create();
+            if (!s_callbackPump) {
+                geode::log::error("Discord Social SDK: failed to create callback pump.");
+            }
+        }
+    }
+
     // The Social SDK can dispatch work from native worker threads. Geode/Cocos
     // objects must only be touched from the game thread, so route SDK tasks
     // through Geode's main-thread queue before constructing the Client.
@@ -36,6 +68,7 @@ namespace {
             configureDiscordSdkThreading();
             s_discordClient = std::make_shared<discordpp::Client>();
             s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
+            startDiscordCallbackPump();
         }
 
         discordpp::Activity activity;
@@ -77,9 +110,8 @@ namespace {
                         result.Error());
                 }
             });
-        // Do not pump SDK callbacks here. Discord documents RunCallbacks as a
-        // periodic main-loop operation; calling it only immediately after the
-        // request is not a valid substitute for a game-loop integration.
+        // DiscordCallbackPump processes asynchronous SDK callbacks each frame
+        // on the game thread; do not call RunCallbacks only once here.
     }
 }
 #endif
@@ -116,8 +148,6 @@ void RPCManager::clearRPC() {
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
     if (s_discordClient) {
         s_discordClient->ClearRichPresence();
-        // Callback pumping must be wired into the game's regular main loop
-        // before this SDK path can safely be enabled.
     }
 #elif defined(DRPC_ANDROID_NO_PRESENCE)
     currentOptions = RPCOptions{};
