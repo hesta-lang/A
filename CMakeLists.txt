@@ -41,7 +41,7 @@ if (ANDROID)
             IMPORTED_LOCATION "${DISCORD_SOCIAL_SDK_LIBRARY}")
         target_include_directories(${PROJECT_NAME} PRIVATE
             "${DISCORD_SOCIAL_SDK_ROOT}/include")
-        target_link_libraries(${PROJECT_NAME} PRIVATE discord_partner_sdk)
+        target_link_libraries(${PROJECT_NAME} discord_partner_sdk)
         target_compile_definitions(${PROJECT_NAME} PRIVATE DRPC_ANDROID_SOCIAL_SDK=1)
         message(STATUS "Discord Social SDK enabled for Android ABI: ${ANDROID_ABI}")
     else()
