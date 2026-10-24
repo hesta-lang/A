@@ -28,6 +28,7 @@ jobs:
           sdk: latest
           build-config: Release
           android-min-sdk: 23
+          configure-args: -DDRPC_ENABLE_ANDROID_SOCIAL_SDK=ON
       - name: Find generated package
         id: artifact
         shell: bash
