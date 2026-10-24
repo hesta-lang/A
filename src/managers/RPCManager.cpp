@@ -73,12 +73,11 @@ namespace {
 void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
-    // Android RPC presence is supported without Client::Connect on Social SDK 1.10+.
-    // Discord must be installed and signed in on the device.
-    s_discordClient = std::make_shared<discordpp::Client>();
-    s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
+    // Defer native Client construction until the first actual presence update.
+    // This keeps SDK startup out of Geode's early mod initialization path.
+    // Discord must be installed and signed in on the device; RPC does not require Connect().
     hasInitializedRPC = true;
-    geode::log::info("Discord Social SDK: Android RPC client initialized.");
+    geode::log::info("Discord Social SDK: Android RPC deferred until first presence update.");
 #elif defined(DRPC_ANDROID_NO_PRESENCE)
     geode::log::warn(
         "Discord Rich Presence: SDK files are missing from external/discord-social-sdk; "
