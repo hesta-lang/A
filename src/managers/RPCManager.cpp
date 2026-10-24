@@ -63,13 +63,23 @@ namespace {
         });
     }
 
+    void initializeAndroidDiscordClient() {
+        if (s_discordClient) return;
+        configureDiscordSdkThreading();
+        s_discordClient = std::make_shared<discordpp::Client>();
+        s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
+        geode::log::info("Discord Social SDK: native client constructed.");
+#if !defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+        startDiscordCallbackPump();
+#endif
+    }
+
     void updateAndroidPresence(const RPCOptions& options) {
-        if (!s_discordClient) {
-            configureDiscordSdkThreading();
-            s_discordClient = std::make_shared<discordpp::Client>();
-            s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
-            startDiscordCallbackPump();
-        }
+        initializeAndroidDiscordClient();
+#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+        geode::log::info("Discord Social SDK diagnostic mode: skipping UpdateRichPresence.");
+        return;
+#endif
 
         discordpp::Activity activity;
         activity.SetType(discordpp::ActivityTypes::Playing);
@@ -119,11 +129,21 @@ namespace {
 void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
-    // Defer native Client construction until the first actual presence update.
-    // This keeps SDK startup out of Geode's early mod initialization path.
-    // Discord must be installed and signed in on the device; RPC does not require Connect().
-    hasInitializedRPC = true;
+#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+    // Isolate native SDK construction from callbacks and presence updates.
+    try {
+        configureDiscordSdkThreading();
+        s_discordClient = std::make_shared<discordpp::Client>();
+        s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
+        geode::log::info("Discord Social SDK diagnostic: client initialization succeeded; callbacks and presence disabled.");
+    } catch (const std::exception& e) {
+        geode::log::error("Discord Social SDK diagnostic: client initialization threw: {}", e.what());
+    }
+#else
+    // Delay native client construction until the first presence update.
     geode::log::info("Discord Social SDK: Android RPC deferred until first presence update.");
+#endif
+    hasInitializedRPC = true;
 #elif defined(DRPC_ANDROID_NO_PRESENCE)
     geode::log::warn(
         "Discord Rich Presence: SDK files are missing from external/discord-social-sdk; "
@@ -146,9 +166,14 @@ void RPCManager::initRPC() {
 
 void RPCManager::clearRPC() {
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
+#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+    currentOptions = RPCOptions{};
+    return;
+#else
     if (s_discordClient) {
         s_discordClient->ClearRichPresence();
     }
+#endif
 #elif defined(DRPC_ANDROID_NO_PRESENCE)
     currentOptions = RPCOptions{};
 #else
@@ -160,7 +185,12 @@ void RPCManager::setRPC(RPCOptions options) {
     if (options == currentOptions) return;
     currentOptions = options;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
+#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+    geode::log::info("Discord Social SDK diagnostic: presence update skipped.");
+    return;
+#else
     updateAndroidPresence(currentOptions);
+#endif
 #elif defined(DRPC_ANDROID_NO_PRESENCE)
     // Presence stays disabled until the extracted SDK is added to this repository.
     return;
