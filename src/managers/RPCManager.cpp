@@ -130,15 +130,11 @@ void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
 #if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
-    // Isolate native SDK construction from callbacks and presence updates.
-    try {
-        configureDiscordSdkThreading();
-        s_discordClient = std::make_shared<discordpp::Client>();
-        s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
-        geode::log::info("Discord Social SDK diagnostic: client initialization succeeded; callbacks and presence disabled.");
-    } catch (const std::exception& e) {
-        geode::log::error("Discord Social SDK diagnostic: client initialization threw: {}", e.what());
-    }
+    // Diagnostic stage 2: keep the SDK linked, but make NO SDK calls.
+    // The previous init-only test still aborted inside libdiscord_partner_sdk.so
+    // on a native worker thread, so isolate library loading/linking from Client
+    // construction, synchronization setup, callbacks, and presence updates.
+    geode::log::info("Discord Social SDK diagnostic: SDK linked; all SDK calls disabled.");
 #else
     // Delay native client construction until the first presence update.
     geode::log::info("Discord Social SDK: Android RPC deferred until first presence update.");
