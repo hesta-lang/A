@@ -1,19 +1,87 @@
 #include "RPCManager.hpp"
-#if !defined(DRPC_ANDROID_NO_PRESENCE)
+
+#if defined(DRPC_ANDROID_SOCIAL_SDK)
+#include <discordpp.h>
+#include <memory>
+#include <optional>
+#include <string>
+#elif !defined(DRPC_ANDROID_NO_PRESENCE)
 #include <discord-rpc.hpp>
 #endif
+
 #include <Geode/loader/Log.hpp>
 
 using namespace geode::log;
 
 #define APPLICATION_ID "1178492879627366472"
 
+#if defined(DRPC_ANDROID_SOCIAL_SDK)
+namespace {
+    std::shared_ptr<discordpp::Client> s_discordClient;
+
+    void updateAndroidPresence(const RPCOptions& options) {
+        if (!s_discordClient) {
+            s_discordClient = std::make_shared<discordpp::Client>();
+            s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
+        }
+
+        discordpp::Activity activity;
+        activity.SetType(discordpp::ActivityTypes::Playing);
+
+        const auto state = options.state.empty() ? RPCManager::get().defaultState : options.state;
+        if (!state.empty()) activity.SetState(state);
+        if (!options.details.empty()) activity.SetDetails(options.details);
+
+        discordpp::ActivityAssets assets;
+        bool hasAssets = false;
+        const auto largeImage = options.largeImage.empty()
+            ? RPCManager::get().defaultLargeImage : options.largeImage;
+        const auto largeText = options.largeImageText.empty()
+            ? RPCManager::get().defaultLargeImageText : options.largeImageText;
+        if (!largeImage.empty()) {
+            assets.SetLargeImage(largeImage);
+            hasAssets = true;
+        }
+        if (!largeText.empty()) {
+            assets.SetLargeText(largeText);
+            hasAssets = true;
+        }
+        if (hasAssets) activity.SetAssets(assets);
+
+        if (options.startTimestamp != 0 || options.endTimestamp != 0) {
+            discordpp::ActivityTimestamps timestamps;
+            if (options.startTimestamp != 0) timestamps.SetStart(options.startTimestamp);
+            if (options.endTimestamp != 0) timestamps.SetEnd(options.endTimestamp);
+            activity.SetTimestamps(timestamps);
+        }
+
+        s_discordClient->UpdateRichPresence(std::move(activity),
+            [](discordpp::ClientResult result) {
+                if (result.Successful()) {
+                    geode::log::info("Discord Social SDK: Rich Presence updated.");
+                } else {
+                    geode::log::warn("Discord Social SDK: Rich Presence update failed: {}",
+                        result.Error());
+                }
+            });
+        discordpp::RunCallbacks();
+    }
+}
+#endif
+
 void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
-#if defined(DRPC_ANDROID_NO_PRESENCE)
+#if defined(DRPC_ANDROID_SOCIAL_SDK)
+    // Android RPC presence is supported without Client::Connect on Social SDK 1.10+.
+    // Discord must be installed and signed in on the device.
+    s_discordClient = std::make_shared<discordpp::Client>();
+    s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
+    hasInitializedRPC = true;
+    geode::log::info("Discord Social SDK: Android RPC client initialized.");
+#elif defined(DRPC_ANDROID_NO_PRESENCE)
     geode::log::warn(
-        "Discord Rich Presence: Android compile-only backend is active; "
-        "no activity will be sent until Discord Social SDK Android RPC is integrated."
+        "Discord Rich Presence: SDK files are missing from external/discord-social-sdk; "
+        "Android presence is disabled."
     );
     hasInitializedRPC = true;
 #else
@@ -31,7 +99,10 @@ void RPCManager::initRPC() {
 }
 
 void RPCManager::clearRPC() {
-#if defined(DRPC_ANDROID_NO_PRESENCE)
+#if defined(DRPC_ANDROID_SOCIAL_SDK)
+    if (s_discordClient) s_discordClient->ClearRichPresence();
+    discordpp::RunCallbacks();
+#elif defined(DRPC_ANDROID_NO_PRESENCE)
     currentOptions = RPCOptions{};
 #else
     discord::RPCManager::get().clearPresence();
@@ -41,9 +112,10 @@ void RPCManager::clearRPC() {
 void RPCManager::setRPC(RPCOptions options) {
     if (options == currentOptions) return;
     currentOptions = options;
-#if defined(DRPC_ANDROID_NO_PRESENCE)
-    // Keep the game-state collection logic active on Android. The Android
-    // transport can consume currentOptions once implemented with Social SDK.
+#if defined(DRPC_ANDROID_SOCIAL_SDK)
+    updateAndroidPresence(currentOptions);
+#elif defined(DRPC_ANDROID_NO_PRESENCE)
+    // Presence stays disabled until the extracted SDK is added to this repository.
     return;
 #else
     auto& presence = discord::Presence::get();
@@ -52,12 +124,8 @@ void RPCManager::setRPC(RPCOptions options) {
     presence
         .setState(options.state.empty() ? defaultState : options.state)
         .setDetails(options.details)
-        .setLargeImageKey(
-            options.largeImage.empty() ? defaultLargeImage : options.largeImage
-        )
-        .setLargeImageText(
-            options.largeImage.empty() ? defaultLargeImageText : options.largeImageText
-        )
+        .setLargeImageKey(options.largeImage.empty() ? defaultLargeImage : options.largeImage)
+        .setLargeImageText(options.largeImage.empty() ? defaultLargeImageText : options.largeImageText)
         .setSmallImageKey(options.smallImage)
         .setSmallImageText(options.smallImageText)
         .setStartTimestamp(options.startTimestamp != 0 ? options.startTimestamp : startTime)
@@ -79,59 +147,44 @@ void RPCManager::setRPC(RPCOptions options) {
 }
 
 LevelDifficulty RPCManager::getDifficultyFromLevel(GJGameLevel* level) {
-    if (level->m_autoLevel) {
-        return Auto;
-    }
+    if (level->m_autoLevel) return Auto;
     if (level->m_demon == 1) {
         switch (level->m_demonDifficulty) {
-            case 3:
-                return EasyDemon;
-            case 4:
-                return MediumDemon;
-            case 0:
-                return HardDemon;
-            case 5:
-                return InsaneDemon;
-            case 6:
-                return ExtremeDemon;
+            case 3: return EasyDemon;
+            case 4: return MediumDemon;
+            case 0: return HardDemon;
+            case 5: return InsaneDemon;
+            case 6: return ExtremeDemon;
         }
     }
-    #define DIFF_INT(diff) static_cast<int>(GJDifficulty::diff)
+#define DIFF_INT(diff) static_cast<int>(GJDifficulty::diff)
     auto diff = level->getAverageDifficulty();
-    if (level->m_levelType == GJLevelType::Main) {
-        diff = static_cast<int>(level->m_difficulty);
-    }
+    if (level->m_levelType == GJLevelType::Main) diff = static_cast<int>(level->m_difficulty);
     switch (diff) {
-        case 0:
-            return NA;
-        case DIFF_INT(Easy):
-            return Easy;
-        case DIFF_INT(Normal):
-            return Normal;
-        case DIFF_INT(Hard):
-            return Hard;
-        case DIFF_INT(Harder):
-            return Harder;
-        case DIFF_INT(Insane):
-            return Insane;
+        case 0: return NA;
+        case DIFF_INT(Easy): return Easy;
+        case DIFF_INT(Normal): return Normal;
+        case DIFF_INT(Hard): return Hard;
+        case DIFF_INT(Harder): return Harder;
+        case DIFF_INT(Insane): return Insane;
     }
-    #undef DIFF_INT
+#undef DIFF_INT
     return NA;
 }
 
 std::string RPCManager::getAssetKey(LevelDifficulty difficulty) {
     switch (difficulty) {
-        case NA:            return "na";
-        case Auto:          return "auto";
-        case Easy:          return "easy";
-        case Normal:        return "normal";
-        case Hard:          return "hard";
-        case Harder:        return "harder";
-        case Insane:        return "insane";
-        case EasyDemon:     return "easy_demon";
-        case MediumDemon:   return "medium_demon";
-        case HardDemon:     return "hard_demon";
-        case InsaneDemon:   return "insane_demon";
-        case ExtremeDemon:  return "extreme_demon";
+        case NA: return "na";
+        case Auto: return "auto";
+        case Easy: return "easy";
+        case Normal: return "normal";
+        case Hard: return "hard";
+        case Harder: return "harder";
+        case Insane: return "insane";
+        case EasyDemon: return "easy_demon";
+        case MediumDemon: return "medium_demon";
+        case HardDemon: return "hard_demon";
+        case InsaneDemon: return "insane_demon";
+        case ExtremeDemon: return "extreme_demon";
     }
 }
