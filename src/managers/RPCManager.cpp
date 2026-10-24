@@ -130,11 +130,14 @@ void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
 #if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
-    // Diagnostic stage 2: keep the SDK linked, but make NO SDK calls.
-    // The previous init-only test still aborted inside libdiscord_partner_sdk.so
-    // on a native worker thread, so isolate library loading/linking from Client
-    // construction, synchronization setup, callbacks, and presence updates.
-    geode::log::info("Discord Social SDK diagnostic: SDK linked; all SDK calls disabled.");
+    // Diagnostic stage 3: test synchronization-context registration only.
+    // Do not construct Client, start callbacks, or update presence yet.
+    try {
+        configureDiscordSdkThreading();
+        geode::log::info("Discord Social SDK diagnostic: synchronization context configured; client/callbacks/presence disabled.");
+    } catch (const std::exception& e) {
+        geode::log::error("Discord Social SDK diagnostic: synchronization setup threw: {}", e.what());
+    }
 #else
     // Delay native client construction until the first presence update.
     geode::log::info("Discord Social SDK: Android RPC deferred until first presence update.");
