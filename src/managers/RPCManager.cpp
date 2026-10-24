@@ -20,8 +20,20 @@ using namespace geode::log;
 namespace {
     std::shared_ptr<discordpp::Client> s_discordClient;
 
+    // The Social SDK can dispatch work from native worker threads. Geode/Cocos
+    // objects must only be touched from the game thread, so route SDK tasks
+    // through Geode's main-thread queue before constructing the Client.
+    void configureDiscordSdkThreading() {
+        discordpp::SetSynchronizationContext([](std::function<void()> task) {
+            geode::queueInMainThread([task = std::move(task)]() mutable {
+                task();
+            });
+        });
+    }
+
     void updateAndroidPresence(const RPCOptions& options) {
         if (!s_discordClient) {
+            configureDiscordSdkThreading();
             s_discordClient = std::make_shared<discordpp::Client>();
             s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
         }
