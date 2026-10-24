@@ -27,7 +27,7 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 # Enable explicitly with -DDRPC_ENABLE_ANDROID_SOCIAL_SDK=ON only after
 # the launcher packaging and SDK initialization have been verified.
 if (ANDROID)
-    option(DRPC_ENABLE_ANDROID_SOCIAL_SDK "Enable Discord Social SDK for Android" OFF)
+    option(DRPC_ENABLE_ANDROID_SOCIAL_SDK "Enable Discord Social SDK for Android" ON)
 
     if (DRPC_ENABLE_ANDROID_SOCIAL_SDK)
         set(DISCORD_SOCIAL_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/discord-social-sdk"
