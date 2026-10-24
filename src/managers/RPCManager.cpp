@@ -1,6 +1,7 @@
 #include "RPCManager.hpp"
 
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
+#define DISCORDPP_IMPLEMENTATION
 #include <discordpp.h>
 #include <memory>
 #include <optional>
