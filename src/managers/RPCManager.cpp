@@ -130,17 +130,9 @@ void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
 #if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
-    // Diagnostic stage 4: test Client construction and Application ID only.
-    // Synchronization-context setup has passed independently. Do not start
-    // callbacks or update presence in this stage.
-    try {
-        configureDiscordSdkThreading();
-        s_discordClient = std::make_shared<discordpp::Client>();
-        s_discordClient->SetApplicationId(std::stoull(APPLICATION_ID));
-        geode::log::info("Discord Social SDK diagnostic: client constructed and application ID set; callbacks/presence disabled.");
-    } catch (const std::exception& e) {
-        geode::log::error("Discord Social SDK diagnostic: client initialization threw: {}", e.what());
-    }
+    // Safe diagnostic stage: SDK is linked, but no SDK functions are called.
+    // Client construction previously caused SIGABRT in libdiscord_partner_sdk.so.
+    geode::log::info("Discord Social SDK diagnostic: client creation disabled after native abort; SDK calls skipped.");
 #else
     // Delay native client construction until the first presence update.
     geode::log::info("Discord Social SDK: Android RPC deferred until first presence update.");
