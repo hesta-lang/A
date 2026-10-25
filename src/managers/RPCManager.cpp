@@ -83,6 +83,7 @@ namespace {
 
         discordpp::Activity activity;
         activity.SetType(discordpp::ActivityTypes::Playing);
+        activity.SetName("Geometry Dash");
 
         const auto state = options.state.empty() ? RPCManager::get().defaultState : options.state;
         if (!state.empty()) activity.SetState(state);
