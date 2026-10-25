@@ -130,12 +130,15 @@ void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
 #if defined(DRPC_ANDROID_DIAGNOSTIC_CLIENT_CONSTRUCTOR)
-    // Isolated crash-location test. This build intentionally tests only the
-    // Client constructor; no app ID, callback pump, callbacks, or presence.
-    geode::log::warn("DRPC_DIAG_STAGE_0: entering constructor-only test; no SDK client exists yet.");
-    geode::log::warn("DRPC_DIAG_STAGE_1: immediately before discordpp::Client constructor.");
+    // Isolated crash-location test with the SDK synchronization context configured
+    // first, matching the order used by normal Android client initialization.
+    geode::log::warn("DRPC_DIAG_STAGE_0: entering sync-context-plus-constructor test.");
+    geode::log::warn("DRPC_DIAG_STAGE_1: before configuring Discord SDK synchronization context.");
+    configureDiscordSdkThreading();
+    geode::log::warn("DRPC_DIAG_STAGE_2: synchronization context configured.");
+    geode::log::warn("DRPC_DIAG_STAGE_3: immediately before discordpp::Client constructor.");
     s_discordClient = std::make_shared<discordpp::Client>();
-    geode::log::warn("DRPC_DIAG_STAGE_2: discordpp::Client constructor returned successfully.");
+    geode::log::warn("DRPC_DIAG_STAGE_4: discordpp::Client constructor returned successfully.");
     // Keep the client alive; avoid testing its destructor in this run.
     hasInitializedRPC = true;
 #elif defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
