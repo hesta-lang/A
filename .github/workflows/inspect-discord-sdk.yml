@@ -1,0 +1,60 @@
+name: Inspect Discord Social SDK (Android ARM64)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-sdk:
+    name: Inspect native SDK and headers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify SDK files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f external/discord-social-sdk/include/discordpp.h
+          test -f external/discord-social-sdk/include/cdiscord.h
+          test -f external/discord-social-sdk/libs/arm64-v8a/libdiscord_partner_sdk.so
+          echo "All three expected SDK files are present."
+
+      - name: Inspect ELF architecture and dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="external/discord-social-sdk/libs/arm64-v8a/libdiscord_partner_sdk.so"
+          {
+            echo "=== file ==="
+            file "$SDK"
+            echo
+            echo "=== ELF header ==="
+            readelf -h "$SDK"
+            echo
+            echo "=== dynamic dependencies and SONAME ==="
+            readelf -d "$SDK" | grep -E 'NEEDED|SONAME|RPATH|RUNPATH' || true
+            echo
+            echo "=== exported SDK-related symbols ==="
+            readelf -Ws "$SDK" | grep -Ei 'Discord|discord|Client_Create|RunCallbacks|SynchronizationContext' | head -n 120 || true
+            echo
+            echo "=== version/platform-related strings ==="
+            strings "$SDK" | grep -iE 'version|discord|android|sdk|linux|platform' | head -n 120 || true
+            echo
+            echo "=== SHA-256 ==="
+            sha256sum \
+              external/discord-social-sdk/include/discordpp.h \
+              external/discord-social-sdk/include/cdiscord.h \
+              "$SDK"
+          } | tee discord-sdk-inspection.txt
+
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: discord-sdk-inspection-report
+          path: discord-sdk-inspection.txt
+          if-no-files-found: error
+          retention-days: 14
