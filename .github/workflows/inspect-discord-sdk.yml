@@ -2,6 +2,12 @@ name: Inspect Discord Social SDK (Android ARM64)
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/inspect-discord-sdk.yml"
+      - "external/discord-social-sdk/include/**"
+      - "external/discord-social-sdk/libs/arm64-v8a/**"
 
 permissions:
   contents: read
@@ -23,7 +29,7 @@ jobs:
           test -f external/discord-social-sdk/libs/arm64-v8a/libdiscord_partner_sdk.so
           echo "All three expected SDK files are present."
 
-      - name: Inspect ELF architecture and dependencies
+      - name: Inspect ELF, SDK version getters, and initialization symbols
         shell: bash
         run: |
           set -euo pipefail
@@ -38,8 +44,16 @@ jobs:
             echo "=== dynamic dependencies and SONAME ==="
             readelf -d "$SDK" | grep -E 'NEEDED|SONAME|RPATH|RUNPATH' || true
             echo
-            echo "=== exported SDK-related symbols ==="
-            readelf -Ws "$SDK" | grep -Ei 'Discord|discord|Client_Create|RunCallbacks|SynchronizationContext' | head -n 120 || true
+            echo "=== SDK version functions ==="
+            readelf -Ws "$SDK" | grep -E 'Discord_Client_GetVersion(Major|Minor|Patch)|Discord_Client_GetVersionHash' || true
+            for symbol in Discord_Client_GetVersionMajor Discord_Client_GetVersionMinor Discord_Client_GetVersionPatch Discord_Client_Init Discord_Client_InitWithOptions Discord_SetFreeThreaded Discord_RunCallbacks Java_com_discord_socialsdk_DiscordRpcClient_nativeOnFrame Java_com_discord_socialsdk_DiscordRpcClient_nativeOnClose; do
+              echo
+              echo "=== disassembly: $symbol ==="
+              objdump -d --disassemble="$symbol" "$SDK" || true
+            done
+            echo
+            echo "=== exported initialization / JNI symbols ==="
+            readelf -Ws "$SDK" | grep -Ei 'Discord_Client_Init|Discord_Client_GetVersion|Discord_SetFreeThreaded|Discord_RunCallbacks|Java_com_discord_socialsdk_DiscordRpcClient' || true
             echo
             echo "=== version/platform-related strings ==="
             strings "$SDK" | grep -iE 'version|discord|android|sdk|linux|platform' | head -n 120 || true
