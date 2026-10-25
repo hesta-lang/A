@@ -301,7 +301,9 @@ void Observer::updateRPC() {
                 state = "Playing a";
             }
 
-            state = fmt::format("Run From: {}%", runFromPercent);
+            state = runFromPercent > 0
+                ? fmt::format("Run From: {}%", runFromPercent)
+                : "New Best";
         
             auto inChampions = champions::inChampionsGame().unwrapOr(false);
             if (inChampions) {
