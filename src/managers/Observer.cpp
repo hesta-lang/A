@@ -235,7 +235,28 @@ void Observer::updateRPC() {
                 .details = fmt::format("In {}'s shop", shopkeeper)
             });
         });
+        // Mega Hack's StartPos Switcher starts a PlayLayer at the selected
+        // start position. Capture the initial level percentage for this run and
+        // expose it as the activity state instead of reporting live progress.
         callIf<PlayLayer>([&options](PlayLayer* layer) {
+            static PlayLayer* lastPlayLayer = nullptr;
+            static int runFromPercent = 0;
+            static int lastObservedPercent = 0;
+
+            int currentPercent = layer->getCurrentPercent();
+            if (layer != lastPlayLayer) {
+                lastPlayLayer = layer;
+                runFromPercent = currentPercent;
+                lastObservedPercent = currentPercent;
+            } else if (currentPercent < lastObservedPercent) {
+                // A StartPos Switcher change/restart moves the player back to
+                // the selected spawn point. Refresh the run origin on that reset.
+                runFromPercent = currentPercent;
+                lastObservedPercent = currentPercent;
+            } else {
+                lastObservedPercent = currentPercent;
+            }
+
             auto level = layer->m_level;
 
             std::string details = fmt::format(
@@ -280,7 +301,7 @@ void Observer::updateRPC() {
                 state = "Playing a";
             }
 
-            state = fmt::format("{} level (best: {})", state, bestString);
+            state = fmt::format("Run From: {}%", runFromPercent);
         
             auto inChampions = champions::inChampionsGame().unwrapOr(false);
             if (inChampions) {
