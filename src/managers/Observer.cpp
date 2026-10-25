@@ -301,9 +301,16 @@ void Observer::updateRPC() {
                 state = "Playing a";
             }
 
-            state = runFromPercent > 0
-                ? fmt::format("Run From: {}%", runFromPercent)
-                : fmt::format("New Best: {}", bestString);
+            bool showRunFrom = Mod::get()->getSettingValue<bool>("show-run-from");
+            bool showBestRun = Mod::get()->getSettingValue<bool>("show-best-run");
+
+            if (runFromPercent > 0 && showRunFrom) {
+                state = fmt::format("Run From: {}%", runFromPercent);
+            } else if (runFromPercent == 0 && showBestRun) {
+                state = fmt::format("New Best: {}", bestString);
+            } else {
+                state = layer->m_isPracticeMode ? "Practicing" : "Playing";
+            }
         
             auto inChampions = champions::inChampionsGame().unwrapOr(false);
             if (inChampions) {
