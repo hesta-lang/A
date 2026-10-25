@@ -169,7 +169,7 @@ void RPCManager::initRPC() {
 
 void RPCManager::clearRPC() {
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
-#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY) || defined(DRPC_ANDROID_DIAGNOSTIC_CLIENT_CONSTRUCTOR)
     currentOptions = RPCOptions{};
     return;
 #else
@@ -188,7 +188,7 @@ void RPCManager::setRPC(RPCOptions options) {
     if (options == currentOptions) return;
     currentOptions = options;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
-#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY) || defined(DRPC_ANDROID_DIAGNOSTIC_CLIENT_CONSTRUCTOR)
     geode::log::info("Discord Social SDK diagnostic: presence update skipped.");
     return;
 #else
