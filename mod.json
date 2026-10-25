@@ -23,6 +23,18 @@
 			"description": "Will change your status to idle when GD is unfocused",
 			"type": "bool",
 			"default": true
+		},
+		"show-run-from": {
+			"name": "Show Run From:",
+			"description": "Show the starting percentage in Discord Rich Presence when using a start position.",
+			"type": "bool",
+			"default": true
+		},
+		"show-best-run": {
+			"name": "Show Best Run",
+			"description": "Show the best record in Discord Rich Presence when starting from 0%.",
+			"type": "bool",
+			"default": true
 		}
 	}
 }
