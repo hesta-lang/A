@@ -94,21 +94,11 @@ namespace {
             options.details.empty() ? "Playing Geometry Dash" : options.details,
             state.empty() ? "Playing Geometry Dash" : state);
 
-        discordpp::ActivityAssets assets;
-        bool hasAssets = false;
-        const auto largeImage = options.largeImage.empty()
-            ? RPCManager::get().defaultLargeImage : options.largeImage;
-        const auto largeText = options.largeImageText.empty()
-            ? RPCManager::get().defaultLargeImageText : options.largeImageText;
-        if (!largeImage.empty()) {
-            assets.SetLargeImage(largeImage);
-            hasAssets = true;
-        }
-        if (!largeText.empty()) {
-            assets.SetLargeText(largeText);
-            hasAssets = true;
-        }
-        if (hasAssets) activity.SetAssets(assets);
+        // Do not send the legacy mod's asset keys through the Android Social SDK.
+        // Keys such as "gd-large" and difficulty names belong to the original RPC
+        // application and may not exist in the user's Discord application. An
+        // invalid custom asset can suppress the expected application-icon fallback.
+        // With no ActivityAssets set, Discord uses this Application ID's app icon.
 
         if (options.startTimestamp != 0 || options.endTimestamp != 0) {
             discordpp::ActivityTimestamps timestamps;
