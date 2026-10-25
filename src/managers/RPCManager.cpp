@@ -130,15 +130,10 @@ void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
 #if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
-    // Diagnostic stage: test Client construction alone. Do not register the
-    // synchronization context, set the application ID, run callbacks, or
-    // update presence. This isolates the constructor from the other SDK calls.
-    try {
-        s_discordClient = std::make_shared<discordpp::Client>();
-        geode::log::info("Discord Social SDK diagnostic: Client constructor returned; app ID/callbacks/presence disabled.");
-    } catch (const std::exception& e) {
-        geode::log::error("Discord Social SDK diagnostic: Client constructor threw: {}", e.what());
-    }
+    // Safe diagnostic mode: do not call into the Android Discord SDK.
+    // The constructor-only test still aborts the game on Android arm64, so
+    // keep the mod stable while SDK/header/binary compatibility is verified.
+    geode::log::warn("Discord Social SDK diagnostic: native SDK calls disabled after constructor crash.");
 #else
     // Delay native client construction until the first presence update.
     geode::log::info("Discord Social SDK: Android RPC deferred until first presence update.");
