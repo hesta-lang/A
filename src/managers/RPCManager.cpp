@@ -129,16 +129,24 @@ namespace {
 void RPCManager::initRPC() {
     if (hasInitializedRPC) return;
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
-#if defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
+#if defined(DRPC_ANDROID_DIAGNOSTIC_CLIENT_CONSTRUCTOR)
+    // Isolated crash-location test. This build intentionally tests only the
+    // Client constructor; no app ID, callback pump, callbacks, or presence.
+    geode::log::warn("DRPC_DIAG_STAGE_0: entering constructor-only test; no SDK client exists yet.");
+    geode::log::warn("DRPC_DIAG_STAGE_1: immediately before discordpp::Client constructor.");
+    s_discordClient = std::make_shared<discordpp::Client>();
+    geode::log::warn("DRPC_DIAG_STAGE_2: discordpp::Client constructor returned successfully.");
+    // Keep the client alive; avoid testing its destructor in this run.
+    hasInitializedRPC = true;
+#elif defined(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
     // Safe diagnostic mode: do not call into the Android Discord SDK.
-    // The constructor-only test still aborts the game on Android arm64, so
-    // keep the mod stable while SDK/header/binary compatibility is verified.
-    geode::log::warn("Discord Social SDK diagnostic: native SDK calls disabled after constructor crash.");
+    geode::log::warn("Discord Social SDK diagnostic: native SDK calls disabled.");
+    hasInitializedRPC = true;
 #else
     // Delay native client construction until the first presence update.
     geode::log::info("Discord Social SDK: Android RPC deferred until first presence update.");
-#endif
     hasInitializedRPC = true;
+#endif
 #elif defined(DRPC_ANDROID_NO_PRESENCE)
     geode::log::warn(
         "Discord Rich Presence: SDK files are missing from external/discord-social-sdk; "
