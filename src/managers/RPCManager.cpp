@@ -86,8 +86,10 @@ namespace {
         activity.SetName("Geometry Dash");
 
         const auto state = options.state.empty() ? RPCManager::get().defaultState : options.state;
-        if (!state.empty()) activity.SetState(state);
-        if (!options.details.empty()) activity.SetDetails(options.details);
+        activity.SetState(state.empty() ? "Playing Geometry Dash" : state);
+        // Always provide a visible details line, even when the current game hook
+        // has not supplied a more specific activity description yet.
+        activity.SetDetails(options.details.empty() ? "Playing Geometry Dash" : options.details);
 
         discordpp::ActivityAssets assets;
         bool hasAssets = false;
