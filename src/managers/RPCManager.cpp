@@ -90,6 +90,9 @@ namespace {
         // Always provide a visible details line, even when the current game hook
         // has not supplied a more specific activity description yet.
         activity.SetDetails(options.details.empty() ? "Playing Geometry Dash" : options.details);
+        geode::log::info("Discord Social SDK: sending activity name='Geometry Dash', details='{}', state='{}'.",
+            options.details.empty() ? "Playing Geometry Dash" : options.details,
+            state.empty() ? "Playing Geometry Dash" : state);
 
         discordpp::ActivityAssets assets;
         bool hasAssets = false;
