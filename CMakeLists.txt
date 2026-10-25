@@ -30,6 +30,7 @@ if (ANDROID)
     option(DRPC_ENABLE_ANDROID_SOCIAL_SDK "Enable Discord Social SDK for Android" OFF)
 
     option(DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY "Only test Discord SDK client initialization; skip callbacks and presence" OFF)
+    option(DRPC_ANDROID_DIAGNOSTIC_CLIENT_CONSTRUCTOR "Run isolated Client-constructor crash-location test at mod startup" OFF)
 
     if (DRPC_ENABLE_ANDROID_SOCIAL_SDK)
         set(DISCORD_SOCIAL_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/discord-social-sdk"
@@ -50,6 +51,10 @@ if (ANDROID)
             if (DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY)
                 target_compile_definitions(${PROJECT_NAME} PRIVATE DRPC_ANDROID_DIAGNOSTIC_INIT_ONLY=1)
                 message(WARNING "Diagnostic mode: Discord client init only; callbacks and presence are disabled.")
+            endif()
+            if (DRPC_ANDROID_DIAGNOSTIC_CLIENT_CONSTRUCTOR)
+                target_compile_definitions(${PROJECT_NAME} PRIVATE DRPC_ANDROID_DIAGNOSTIC_CLIENT_CONSTRUCTOR=1)
+                message(WARNING "Diagnostic mode: isolated discordpp::Client constructor test; callbacks and presence are disabled.")
             endif()
             message(STATUS "Discord Social SDK enabled for Android ABI: ${ANDROID_ABI}")
         else()
