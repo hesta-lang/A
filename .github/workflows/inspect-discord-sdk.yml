@@ -20,6 +20,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install ARM64 inspection tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y binutils-aarch64-linux-gnu
+
       - name: Verify SDK files exist
         shell: bash
         run: |
@@ -34,6 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           SDK="external/discord-social-sdk/libs/arm64-v8a/libdiscord_partner_sdk.so"
+          OBJDUMP="aarch64-linux-gnu-objdump"
           {
             echo "=== file ==="
             file "$SDK"
@@ -46,10 +54,10 @@ jobs:
             echo
             echo "=== SDK version functions ==="
             readelf -Ws "$SDK" | grep -E 'Discord_Client_GetVersion(Major|Minor|Patch)|Discord_Client_GetVersionHash' || true
-            for symbol in Discord_Client_GetVersionMajor Discord_Client_GetVersionMinor Discord_Client_GetVersionPatch Discord_Client_Init Discord_Client_InitWithOptions Discord_SetFreeThreaded Discord_RunCallbacks Java_com_discord_socialsdk_DiscordRpcClient_nativeOnFrame Java_com_discord_socialsdk_DiscordRpcClient_nativeOnClose; do
+            for symbol in Discord_Client_GetVersionMajor Discord_Client_GetVersionMinor Discord_Client_GetVersionPatch Discord_Client_GetVersionHash Discord_Client_Init Discord_Client_InitWithOptions Discord_Client_InitWithBases Discord_SetFreeThreaded Discord_RunCallbacks Java_com_discord_socialsdk_DiscordRpcClient_nativeOnFrame Java_com_discord_socialsdk_DiscordRpcClient_nativeOnClose; do
               echo
-              echo "=== disassembly: $symbol ==="
-              objdump -d --disassemble="$symbol" "$SDK" || true
+              echo "=== ARM64 disassembly: $symbol ==="
+              "$OBJDUMP" -d --disassemble="$symbol" "$SDK" || true
             done
             echo
             echo "=== exported initialization / JNI symbols ==="
