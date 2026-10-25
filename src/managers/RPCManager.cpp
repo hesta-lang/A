@@ -14,7 +14,7 @@
 
 using namespace geode::log;
 
-#define APPLICATION_ID "1178492879627366472"
+#define APPLICATION_ID "1563310668881334374"
 
 #if defined(DRPC_ANDROID_SOCIAL_SDK)
 namespace {
