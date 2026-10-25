@@ -265,7 +265,7 @@ void Observer::updateRPC() {
                 level->m_levelType == GJLevelType::Main ? "RobTopGames" : level->m_creatorName
             );
             if (level->m_levelType == GJLevelType::Editor) {
-                details = "Playtesting a created level";
+                details = fmt::format("(Editor Level) {}", level->m_levelName);
             }
 
             std::string bestString;
