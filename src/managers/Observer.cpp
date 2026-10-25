@@ -202,7 +202,7 @@ void Observer::updateRPC() {
             auto sensitiveMode = Mod::get()->getSettingValue<bool>("private-info");
             options.copyFrom({
                 .state = isConnectedToEC ? "Editing a level in EditorCollab" : "Editing a level",
-                .details = fmt::format("Working on {}", sensitiveMode ? level->m_levelName : "a level"),
+                .details = sensitiveMode ? "Working on a level" : fmt::format("(Editing) {}", level->m_levelName),
                 .largeImage = isConnectedToEC ? "https://github.com/editor-collab/ClientUI/blob/main/logo.png?raw=true" : "gd-large",
                 .smallImage = "editor",
                 .smallImageText = sensitiveMode ? (isConnectedToEC ?
